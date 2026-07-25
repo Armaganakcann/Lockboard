@@ -1,0 +1,24 @@
+# Normalize line endings on checkin; check out with LF everywhere.
+* text=auto eol=lf
+
+# Explicitly mark common text types.
+*.py     text eol=lf
+*.pyi    text eol=lf
+*.md     text eol=lf
+*.txt    text eol=lf
+*.toml   text eol=lf
+*.cfg    text eol=lf
+*.ini    text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+*.json   text eol=lf
+
+# Binary files should never be normalized.
+*.png    binary
+*.jpg    binary
+*.gif    binary
+*.ico    binary
+
+# Keep language stats focused on the runtime, not docs/tests.
+docs/**     linguist-documentation
+examples/** linguist-documentation

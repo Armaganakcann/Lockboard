@@ -1,0 +1,103 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aios"
+dynamic = ["version"]
+description = "AIOS — a minimal, extensible reference runtime for AI components."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "Armağan Akcan", email = "armaganakcann@gmail.com" }]
+keywords = [
+    "aios",
+    "runtime",
+    "ai",
+    "operating-layer",
+    "components",
+    "orchestration",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Typing :: Typed",
+]
+dependencies = [
+    "pydantic>=2.6",
+    "click>=8.1",
+    "pyyaml>=6.0",
+    "rich>=13.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.4",
+    "mypy>=1.10",
+    "types-PyYAML>=6.0",
+]
+
+[project.scripts]
+aios = "aios.cli.main:cli"
+
+[project.entry-points."aios.plugins"]
+logging = "aios.plugins:LoggingPlugin"
+metrics = "aios.plugins:MetricsPlugin"
+tracing = "aios.plugins:TracingPlugin"
+
+[project.urls]
+Homepage = "https://github.com/armaganakcan/aios"
+Repository = "https://github.com/armaganakcan/aios"
+Issues = "https://github.com/armaganakcan/aios/issues"
+
+[tool.hatch.version]
+path = "src/aios/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/aios"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/aios",
+    "tests",
+    "examples",
+    "docs",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "pyproject.toml",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", ".", "tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "D", "ANN", "RUF"]
+# D203/D213: mutually-exclusive docstring styles (we pick D211/D212 via defaults).
+# D413: numpy-only "blank line after last section"; we use Google style.
+# B027: empty non-abstract methods are intentional optional lifecycle hooks.
+# ANN401: the runtime deliberately carries an arbitrary `Any` payload.
+ignore = ["D203", "D213", "D413", "B027", "ANN401"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D", "ANN"]
+"examples/**" = ["D", "ANN"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src/aios"]
