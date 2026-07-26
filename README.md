@@ -2,7 +2,7 @@
 
 > A minimal, extensible **reference runtime** for AI components.
 
-[![CI](https://github.com/armaganakcan/aios/actions/workflows/ci.yml/badge.svg)](https://github.com/armaganakcan/aios/actions/workflows/ci.yml)
+[![CI](https://github.com/Armaganakcann/AIOS/actions/workflows/ci.yml/badge.svg)](https://github.com/Armaganakcann/AIOS/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)](CHANGELOG.md)
@@ -20,10 +20,12 @@ which AI applications run and have their lifecycle managed. Its job is not to
 build AI models — it is to *run the components* that make up AI systems, with a
 predictable, well-tested lifecycle.
 
-This release ships the **runtime core only**. Larger subsystems (event bus,
-plugin manager, scheduler, workflow engine, registry, MCP integration,
-multi-agent / distributed / cloud / edge runtimes) are intentionally left out
-and documented as [extension points](docs/extension-points.md).
+On top of the runtime core, AIOS ships an **observational hook system**, a
+minimal **plugin API**, a **plugin manager**, and three first-party plugins
+(`logging`, `metrics`, `tracing`). Larger subsystems (event bus, scheduler,
+workflow engine, registry, MCP integration, multi-agent / distributed / cloud /
+edge runtimes) are intentionally left out and documented as
+[extension points](docs/extension-points.md).
 
 ## Why AIOS?
 
@@ -124,6 +126,53 @@ Guarantees:
   mask the original error.
 - `execute()` must return an `ExecutionResult`; anything else is an error.
 
+## Observability hooks
+
+The runtime accepts optional, **purely observational** lifecycle hooks. Hooks
+never change the flow, the context, or the result; a failing hook is isolated
+and logged. With no hooks registered, the runtime behaves and performs exactly
+as before.
+
+```python
+from aios import Runtime, HookContext, LifecyclePhase
+
+
+class TimingHook:
+    def on_lifecycle(self, context: HookContext) -> None:
+        if context.phase is LifecyclePhase.RUN_END:
+            print(f"run {context.run_id} took {context.elapsed:.3f}s")
+
+
+Runtime(hooks=[TimingHook()]).run("examples/hello.yaml")
+```
+
+See [ADR-0001](docs/adr/ADR-0001-runtime-hooks.md) for the design rationale.
+
+## Plugins
+
+A **plugin** is a lifecycle-managed unit that contributes hooks. The
+`PluginManager` discovers plugins (manual registration and, optionally, Python
+entry points), sets them up, aggregates their hooks into a `Runtime`, and tears
+them down.
+
+```python
+from aios.plugin_manager import PluginManager
+from aios.plugins import LoggingPlugin, MetricsPlugin
+
+metrics = MetricsPlugin()
+with PluginManager(plugins=[LoggingPlugin(), metrics]) as runtime:
+    runtime.run("examples/hello.yaml")
+
+print(metrics.total_runs, metrics.average_elapsed)
+```
+
+Entry-point discovery is **off by default**; enable it with
+`PluginManager(discover_entry_points=True)`. The first-party plugins are
+registered under the `aios.plugins` group: `logging`, `metrics`, `tracing`.
+
+See [ADR-0002](docs/adr/ADR-0002-plugin-api.md) (plugin API) and
+[ADR-0003](docs/adr/ADR-0003-plugin-manager.md) (plugin manager).
+
 ## Project structure
 
 ```
@@ -133,7 +182,8 @@ AIOS/
 ├── CONTRIBUTING.md · CODE_OF_CONDUCT.md · SECURITY.md
 ├── .github/                # CI, issue/PR templates, dependabot, CODEOWNERS
 ├── docs/
-│   └── extension-points.md
+│   ├── extension-points.md
+│   └── adr/                # architecture decision records (ADR-0001..0003)
 ├── examples/
 │   ├── hello.yaml
 │   └── hello_component.py
@@ -147,27 +197,36 @@ AIOS/
     ├── component.py        # Component ABC (lifecycle contract)
     ├── manifest.py         # versioned schema + version dispatch
     ├── loader.py           # dynamic importlib loader
+    ├── hooks.py            # observational RuntimeHook contract
     ├── runtime.py          # orchestration with guaranteed shutdown
-    └── cli/                # Click-based `aios` CLI
+    ├── plugin.py           # Plugin API contract (types only)
+    ├── plugin_manager.py   # PluginManager (separate layer)
+    ├── cli/                # Click-based `aios` CLI
+    └── plugins/            # first-party plugins: logging, metrics, tracing
 ```
 
 ## Roadmap
 
+Shipped:
+
+- [x] Observational runtime hooks
+- [x] Plugin API (contract) and plugin manager (with entry-point discovery)
+- [x] First-party plugins: logging, metrics, tracing
+
 Planned as **independent modules**, never welded to the core:
 
-- [ ] Plugin manager (entry-point discovery)
 - [ ] Component registry
-- [ ] Event bus / observer hooks
+- [ ] Event bus
 - [ ] Scheduler
 - [ ] Workflow engine
 - [ ] Configuration management
-- [ ] Metrics & tracing
 - [ ] Async runtime
 - [ ] Distributed / cloud / edge runtimes
 - [ ] MCP integration & multi-agent runtime
 
 See [docs/extension-points.md](docs/extension-points.md) for how each attaches
-without touching the core.
+without touching the core, and [docs/adr/](docs/adr/) for the architecture
+decision records behind the hook and plugin systems.
 
 ## Contributing
 

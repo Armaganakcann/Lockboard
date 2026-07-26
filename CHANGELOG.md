@@ -9,18 +9,21 @@ Python packaging).
 
 ## [Unreleased]
 
-## [0.1.0a1] — 2026-07-25
+## [0.3.0a1] — 2026-07-25
 
-First public **alpha**. Released under the git tag `v0.1.0-alpha`
-(PEP 440 canonical version: `0.1.0a1`).
+First public **alpha**. Released under the git tag `v0.3.0-alpha`
+(PEP 440 canonical version: `0.3.0a1`).
 
-This release ships the **runtime core only**. Larger subsystems (event bus,
-plugin manager, scheduler, workflow engine, registry, ...) are intentionally
-left out and documented as extension points.
+This release ships the runtime core plus an observational hook system, a minimal
+plugin API, a plugin manager, and three first-party plugins. Larger subsystems
+(event bus, scheduler, workflow engine, registry, ...) are intentionally left
+out and documented as extension points.
 
 ### Added
 
-- **Runtime core** with a guaranteed lifecycle:
+**Runtime core**
+
+- Guaranteed lifecycle:
   `manifest → validate → load → context → initialize → execute → shutdown`.
 - `Component` abstract base class with an optional `initialize`/`shutdown` and a
   mandatory `execute`.
@@ -34,7 +37,36 @@ left out and documented as extension points.
 - `AIOSError` exception hierarchy (`ManifestError`, `ComponentLoadError`,
   `RuntimeExecutionError`, `ConfigurationError`).
 - Type information shipped to consumers via a `py.typed` marker (PEP 561).
-- Test suite (pytest), linting (Ruff), and strict type checking (mypy).
+
+**Runtime hooks (observational)**
+
+- `LifecyclePhase` enum, immutable `HookContext`, and single-method
+  `RuntimeHook` protocol.
+- `Runtime(hooks=...)` constructor injection; `Runtime.run()` unchanged. Hooks
+  cannot alter the flow, context, or result; a failing hook is isolated and
+  logged. No cost when no hooks are registered.
+
+**Plugin API (contract, types only)**
+
+- `Plugin` ABC (mandatory `metadata`; optional `setup`/`hooks`/`teardown`),
+  frozen `PluginMetadata`, and read-only `PluginContext`.
+
+**Plugin manager**
+
+- `PluginManager` orchestrates discovery → instantiate → validate(api_version)
+  → setup → collect hooks → `Runtime(hooks=...)` → teardown, with manual
+  registration and optional (off-by-default) Python entry-point discovery,
+  deterministic ordering, de-duplication, and a `strict` error policy.
+
+**First-party plugins**
+
+- `LoggingPlugin`, `MetricsPlugin`, and `TracingPlugin`, registered under the
+  `aios.plugins` entry-point group.
+
+**Project**
+
+- Test suite (pytest), linting (Ruff), strict type checking (mypy), CI on
+  Python 3.12/3.13, and architecture decision records under `docs/adr/`.
 
 ### Behavior notes
 
@@ -51,5 +83,5 @@ it; there is no prior public release to compare against.
 - A component whose `execute()` does not return an `ExecutionResult` raises a
   `RuntimeExecutionError`.
 
-[Unreleased]: https://github.com/armaganakcan/aios/compare/v0.1.0-alpha...HEAD
-[0.1.0a1]: https://github.com/armaganakcan/aios/releases/tag/v0.1.0-alpha
+[Unreleased]: https://github.com/Armaganakcann/AIOS/compare/v0.3.0-alpha...HEAD
+[0.3.0a1]: https://github.com/Armaganakcann/AIOS/releases/tag/v0.3.0-alpha

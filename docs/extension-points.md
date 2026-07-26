@@ -1,8 +1,10 @@
 # Extension Points
 
 AIOS keeps its core minimal on purpose. This document records the seams where
-future subsystems attach **without** modifying the runtime core. Each of these
-is deliberately *not* implemented yet.
+subsystems attach **without** modifying the runtime core. Some of these are now
+implemented as separate modules built on the hook and plugin systems; the rest
+are deliberately deferred. See [adr/](adr/) for the decisions behind the
+implemented seams.
 
 ## Design rule
 
@@ -18,25 +20,27 @@ If a feature can live outside the core, it stays outside the core.
 
 A component registry is **not** required to load and run a single component
 from a manifest — the loader resolves the class directly via `importlib`.
-A registry only becomes meaningful once plugin discovery exists. Its natural
-home is `importlib.metadata` entry points, delivered as a separate module.
-Adding it to the core now would violate the minimum-core rule, so it is
-documented here instead.
+Plugin discovery now exists (Python entry points, via the plugin manager), but a
+component registry is still deferred: it is not needed to run the runtime and
+would belong in a separate module. Adding it to the core now would violate the
+minimum-core rule, so it is documented here instead.
 
 ## The seams
 
-| Future subsystem      | Attachment point                                              |
-| --------------------- | ------------------------------------------------------------- |
-| Plugin manager        | `loader.py` + packaging entry points (`importlib.metadata`)   |
-| Component registry     | New module built on the plugin discovery seam                 |
-| Configuration mgmt    | `ExecutionContext.config` (already a read-only mapping)        |
-| Metrics / tracing     | `ExecutionContext.metadata` + logger; wrap `Runtime.run`      |
-| Event bus / observers | `Runtime` lifecycle hooks (before/after initialize/execute)   |
-| Scheduler             | A caller that drives `Runtime.run` on a schedule              |
-| Workflow engine       | Composes multiple manifests/components above the runtime      |
-| Manifest evolution    | `manifest.py` version dispatch table (`_MANIFEST_MODELS`)     |
-| Async runtime         | An `AsyncComponent` contract + an async runner alongside      |
-| Distributed runtime   | Stateless components + immutable `ExecutionContext`           |
+| Subsystem                    | Status      | How it attaches                                                                 |
+| ---------------------------- | ----------- | ------------------------------------------------------------------------------- |
+| Runtime hooks                | Implemented | `RuntimeHook` + `LifecyclePhase` + `HookContext`, injected via `Runtime(hooks=...)` |
+| Plugin API                   | Implemented | `Plugin` / `PluginMetadata` / `PluginContext` in `aios.plugin` (types only)     |
+| Plugin manager               | Implemented | `aios.plugin_manager.PluginManager` — manual + entry-point discovery (`aios.plugins`) |
+| Logging / metrics / tracing  | Implemented | First-party plugins in `aios.plugins` that contribute observational hooks       |
+| Manifest evolution           | Available   | `manifest.py` version dispatch table (`_MANIFEST_MODELS`)                       |
+| Configuration mgmt           | Planned     | `ExecutionContext.config` / `PluginContext.config` (already read-only mappings) |
+| Event bus                    | Planned     | A single plugin/hook that re-broadcasts lifecycle events to subscribers          |
+| Component registry           | Planned     | A separate module built on the entry-point discovery seam                       |
+| Scheduler                    | Planned     | A caller that drives `Runtime.run` on a schedule                                |
+| Workflow engine              | Planned     | Composes multiple runs above the runtime                                        |
+| Async runtime                | Planned     | An `AsyncComponent` contract + an async runner alongside                        |
+| Distributed runtime          | Planned     | Stateless components + immutable `ExecutionContext`                             |
 
 ## Manifest versioning
 

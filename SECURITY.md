@@ -2,13 +2,13 @@
 
 ## Supported versions
 
-AIOS is currently in **alpha** (`0.1.x`). Only the latest released version
+AIOS is currently in **alpha** (`0.3.x`). Only the latest released version
 receives security fixes.
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.1.x   | :white_check_mark: |
-| < 0.1   | :x:                |
+| 0.3.x   | :white_check_mark: |
+| < 0.3   | :x:                |
 
 ## Reporting a vulnerability
 
@@ -16,7 +16,7 @@ receives security fixes.
 
 Instead, report them privately using one of the following:
 
-- [GitHub Security Advisories](https://github.com/armaganakcan/aios/security/advisories/new)
+- [GitHub Security Advisories](https://github.com/Armaganakcann/AIOS/security/advisories/new)
   (preferred), or
 - email: **armaganakcann@gmail.com**
 

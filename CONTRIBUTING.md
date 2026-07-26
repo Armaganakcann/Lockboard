@@ -21,8 +21,8 @@ capabilities belong in future plugins, not in `aios/`.
 Requires **Python 3.12+**.
 
 ```bash
-git clone https://github.com/armaganakcan/aios.git
-cd aios
+git clone https://github.com/Armaganakcann/AIOS.git
+cd AIOS
 python -m pip install -e ".[dev]"
 ```
 
@@ -44,12 +44,22 @@ pytest            # tests
 ## Public API stability
 
 The following are considered the stable public API and should not change
-without a clear, documented justification:
+without a clear, documented justification.
 
-- `Component`
-- `ExecutionContext`, `ExecutionResult`
-- `Runtime.run()`
-- `load_manifest()`, `load_component()`
+Exported from the top-level `aios` package:
+
+- `Component`, `ExecutionContext`, `ExecutionResult`
+- `Runtime` (including `Runtime.run()`)
+- `RuntimeHook`, `LifecyclePhase`, `HookContext`
+- `Plugin`, `PluginMetadata`, `PluginContext`
+- the `AIOSError` hierarchy
+
+Separate layers (imported from their own modules, not re-exported at the top
+level):
+
+- `aios.plugin_manager.PluginManager` (and `PluginError`)
+- the first-party plugins in `aios.plugins`
+- `aios.manifest.load_manifest()`, `aios.loader.load_component()`
 
 Widening an input type (e.g. accepting `str` in addition to `Path`) is
 acceptable because it is backward compatible. Narrowing or renaming is a
@@ -66,11 +76,14 @@ breaking change and must be called out.
 ## Project layout
 
 ```
-src/aios/      # the runtime core (small on purpose)
+src/aios/      # the runtime core, hooks, plugin API/manager, and plugins
 tests/         # pytest suite
 examples/      # runnable examples
-docs/          # architecture & extension-point notes
+docs/          # extension points + architecture decision records (docs/adr/)
 ```
+
+Architecture decisions are recorded as ADRs under
+[docs/adr/](docs/adr/) (hooks, plugin API, plugin manager).
 
 ## Reporting bugs and requesting features
 

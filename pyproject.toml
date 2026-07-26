@@ -53,9 +53,9 @@ metrics = "aios.plugins:MetricsPlugin"
 tracing = "aios.plugins:TracingPlugin"
 
 [project.urls]
-Homepage = "https://github.com/armaganakcan/aios"
-Repository = "https://github.com/armaganakcan/aios"
-Issues = "https://github.com/armaganakcan/aios/issues"
+Homepage = "https://github.com/Armaganakcann/AIOS"
+Repository = "https://github.com/Armaganakcann/AIOS"
+Issues = "https://github.com/Armaganakcann/AIOS/issues"
 
 [tool.hatch.version]
 path = "src/aios/__init__.py"
