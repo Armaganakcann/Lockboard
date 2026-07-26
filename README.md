@@ -1,6 +1,6 @@
 # AIOS — Artificial Intelligence Operating System
 
-> A minimal, extensible **reference runtime** for AI components.
+> A small, strictly-typed runtime for AI components — built as a reproducible substrate for AI runtime and context-engineering research.
 
 [![CI](https://github.com/Armaganakcann/AIOS/actions/workflows/ci.yml/badge.svg)](https://github.com/Armaganakcann/AIOS/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/)
@@ -13,12 +13,17 @@
 
 ## What is AIOS?
 
-AIOS is **not** a model, a framework, an LLM, a chatbot, or an agent.
+AIOS is a small, strictly-typed Python **runtime** that executes AI *components* —
+units of work declared in a manifest and run through an explicit
+`initialize → execute → shutdown` lifecycle. It is **not** a model, an agent
+framework, or an LLM library, and it does not call any model itself.
 
-AIOS is an **Operating Layer / Runtime**: the shared execution environment in
-which AI applications run and have their lifecycle managed. Its job is not to
-build AI models — it is to *run the components* that make up AI systems, with a
-predictable, well-tested lifecycle.
+Its purpose is to be a **research substrate**: a deliberately minimal,
+reproducible base for studying execution and context-management mechanisms in
+AI systems. It is early and intentionally narrow — today it runs single
+components with guaranteed lifecycle semantics, observational lifecycle hooks,
+and a small plugin system. The core is kept stable so experimental mechanisms
+can be attached at defined seams rather than by forking it.
 
 On top of the runtime core, AIOS ships an **observational hook system**, a
 minimal **plugin API**, a **plugin manager**, and three first-party plugins
@@ -27,19 +32,27 @@ workflow engine, registry, MCP integration, multi-agent / distributed / cloud /
 edge runtimes) are intentionally left out and documented as
 [extension points](docs/extension-points.md).
 
-## Why AIOS?
+## Project goals
 
-- **Minimum Core.** If a feature can live outside the core, it stays outside.
-  The runtime is small enough to read in one sitting and hard to accidentally
-  bloat.
-- **Predictable lifecycle.** `initialize → execute → shutdown`, with `shutdown`
-  guaranteed to run and errors that never silently disappear.
-- **Typed and strict.** Full type hints, `py.typed` shipped (PEP 561), passing
-  `mypy --strict`.
-- **Extensible by design.** Plugins, workflow engines, and event buses attach at
-  documented seams — without modifying the core.
-- **Professional from day one.** Versioned manifests, a clean exception
-  hierarchy, library-safe logging, and a real test suite.
+- Serve as a **reproducible substrate** for AI runtime research: deterministic,
+  strictly-typed, and small enough to read in full.
+- Provide **stable seams** (lifecycle hooks, plugins) so new execution or
+  context-management mechanisms can be added and compared without forking the
+  core.
+- Keep the runtime **observable** — every lifecycle step is inspectable — so
+  experiments can be measured rather than guessed.
+- Prefer **correctness and clarity over features**: guaranteed lifecycle
+  semantics, explicit error handling, and a minimal, tested core.
+
+## Non-goals
+
+- Not a production runtime, and not a competitor to Ray, Temporal, or Dapr.
+- Not an agent framework or orchestration DSL — no reasoning graphs or
+  multi-agent conversation patterns (see LangGraph, CrewAI, or the OpenAI
+  Agents SDK for those).
+- No built-in model, prompt, tool-calling, memory, or RAG abstractions.
+- Not tied to any model vendor.
+- No distributed, cloud, or GUI layer.
 
 ## Installation
 
