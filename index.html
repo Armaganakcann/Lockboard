@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; worker-src blob:; object-src 'none'; base-uri 'none'" />
+  <link rel="icon" href="data:," />
+  <title>Lockboard — Don't ask the model. Run it.</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="top">
+    <div>
+      <div class="brand">LOCKBOARD</div>
+      <div class="tag">Don't ask the model. Run it.</div>
+    </div>
+    <div class="meta">
+      <span id="mcp-badge" class="badge miss">WebMCP: checking</span>
+    </div>
+  </header>
+
+  <main class="grid">
+    <section class="card">
+      <h2>Problem</h2>
+      <p class="lead">Implement <code>median(a)</code> for a nonempty array of numbers. Odd length. Correct answer is the middle value of the <em>sorted</em> array.</p>
+      <h3>Candidate under test</h3>
+      <pre class="code" id="candidate-src"></pre>
+      <textarea id="code-input" class="code-input" spellcheck="false"
+        placeholder="Paste a replacement, e.g.&#10;function median(a) {&#10;  const s = [...a].sort((x, y) =&gt; x - y);&#10;  return s[s.length &gt;&gt; 1];&#10;}"></textarea>
+      <div class="btns">
+        <button type="button" data-act="submit_code">submit_code</button>
+      </div>
+      <p class="hint">Submitted code runs only inside a Worker with no network and a hard timeout. It never executes on this page.</p>
+      <h3>Specification</h3>
+      <ul id="spec-list" class="spec"></ul>
+      <h3>Claim</h3>
+      <p id="claim-text" class="claim"></p>
+      <div class="status-row">
+        <span>Status</span>
+        <strong id="status-pill" class="pill unknown">UNKNOWN</strong>
+      </div>
+      <div id="lock-proposal" class="proposal" hidden></div>
+      <div id="dispute-panel" class="dispute" hidden>
+        <div class="dispute-head">This counterexample does not count, because</div>
+        <select id="dispute-reason">
+          <option value="outside_specification">outside specification</option>
+          <option value="invalid_input_domain">invalid input domain</option>
+          <option value="expected_behavior_changed">expected behaviour changed</option>
+        </select>
+        <div class="dispute-head">so the specification now requires</div>
+        <select id="dispute-constraint">
+          <option value="sorted">input is already sorted ascending</option>
+          <option value="nonneg">all values are non-negative</option>
+          <option value="minlen3">length is at least 3</option>
+        </select>
+        <div class="btns">
+          <button type="button" data-act="dispute" class="ghost">Dispute &amp; narrow spec</button>
+        </div>
+      </div>
+      <div class="btns">
+        <button type="button" data-act="lock">Lock</button>
+        <button type="button" data-act="reject" class="ghost">Reject</button>
+        <button type="button" data-act="reset" class="ghost">Reset</button>
+      </div>
+      <p class="hint">Lock is human-only. No registered tool can close this board — an agent can only <code>propose_lock</code>.</p>
+    </section>
+
+    <section class="card">
+      <h2>Evidence</h2>
+      <ul id="evidence" class="evidence"></ul>
+      <div id="counter" class="counter empty">No counterexample yet.</div>
+      <h3>Verifier tools</h3>
+      <div class="btns">
+        <button type="button" data-act="run_tests">run_tests</button>
+        <button type="button" data-act="find_counterexample">find_counterexample</button>
+        <button type="button" data-act="compare_reference">compare_reference</button>
+        <button type="button" data-act="measure_scaling">measure_scaling</button>
+      </div>
+      <p class="hint">Buttons call the same functions WebMCP registers. An agent should not scrape the DOM.</p>
+    </section>
+  </main>
+
+  <footer>
+    One problem, one buggy candidate, one counterexample the page searches for rather than remembers.
+    Human lock ≠ model self-grade. PASS is never written: absence of a counterexample is not proof.
+  </footer>
+  <script src="./app.js"></script>
+</body>
+</html>

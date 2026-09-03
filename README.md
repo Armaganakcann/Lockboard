@@ -1,260 +1,191 @@
-# AIOS — Artificial Intelligence Operating System
+# Lockboard
 
-> A small, strictly-typed runtime for AI components — built as a reproducible substrate for AI runtime and context-engineering research.
+**Agent proposes. Tools verify. Human defines what counts.**
 
-[![CI](https://github.com/Armaganakcann/AIOS/actions/workflows/ci.yml/badge.svg)](https://github.com/Armaganakcann/AIOS/actions/workflows/ci.yml)
-[![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)](CHANGELOG.md)
-[![Checked with mypy](https://img.shields.io/badge/mypy-strict-blue.svg)](https://mypy-lang.org/)
-[![Linted with Ruff](https://img.shields.io/badge/ruff-checked-purple.svg)](https://docs.astral.sh/ruff/)
+A claim board for generated code. The verifier and the code under test do not share a scope. The agent can write code, run it, and argue about it —
+it cannot grade itself and it cannot close the board.
 
----
+## The three invariants
 
-## What is AIOS?
+1. **PASS is never written.** `run_tests` passing leaves the status at `UNKNOWN`, and an
+   exhausted 500-trial search also leaves it at `UNKNOWN`. Absence of a counterexample is
+   not proof, so the board has no way to say so.
+2. **Status is not agent-controlled.** No agent or tool can arbitrarily choose a verdict, and
+   there is no `set_status` tool. `FAIL` is derived from a standing verifier-detected
+   counterexample or non-termination; otherwise the board remains `UNKNOWN`. `LOCKED` can only
+   be set by a human. Tools change the *evidence*; the status follows from it.
+3. **Only a human decides what counts.** An agent can find a counterexample; it cannot rule
+   that one does not apply. A person disputes it with a reason, which narrows the
+   specification — and narrowing the specification changes what the search is allowed to
+   generate next.
 
-AIOS is a small, strictly-typed Python **runtime** that executes AI *components* —
-units of work declared in a manifest and run through an explicit
-`initialize → execute → shutdown` lifecycle. It is **not** a model, an agent
-framework, or an LLM library, and it does not call any model itself.
+## The problem
 
-Its purpose is to be a **research substrate**: a deliberately minimal,
-reproducible base for studying execution and context-management mechanisms in
-AI systems. It is early and intentionally narrow — today it runs single
-components with guaranteed lifecycle semantics, observational lifecycle hooks,
-and a small plugin system. The core is kept stable so experimental mechanisms
-can be attached at defined seams rather than by forking it.
+`median(a)` for a nonempty odd-length numeric array. The board opens with a candidate that
+passes every sorted and trivial input, which is exactly why basic tests are not enough:
 
-On top of the runtime core, AIOS ships an **observational hook system**, a
-minimal **plugin API**, a **plugin manager**, and three first-party plugins
-(`logging`, `metrics`, `tracing`). Larger subsystems (event bus, scheduler,
-workflow engine, registry, MCP integration, multi-agent / distributed / cloud /
-edge runtimes) are intentionally left out and documented as
-[extension points](docs/extension-points.md).
+```js
+function median(a) {
+  return a[Math.floor(a.length / 2)];
+}
+```
 
-## Project goals
+Replace it at any time — paste into the box, or have the agent call `submit_code`.
 
-- Serve as a **reproducible substrate** for AI runtime research: deterministic,
-  strictly-typed, and small enough to read in full.
-- Provide **stable seams** (lifecycle hooks, plugins) so new execution or
-  context-management mechanisms can be added and compared without forking the
-  core.
-- Keep the runtime **observable** — every lifecycle step is inspectable — so
-  experiments can be measured rather than guessed.
-- Prefer **correctness and clarity over features**: guaranteed lifecycle
-  semantics, explicit error handling, and a minimal, tested core.
+## Tools
+
+| tool | writes | notes |
+|---|---|---|
+| `submit_code` | resets to `UNKNOWN` | loads a candidate. The smoke probe only confirms a loadable, callable `median(a)` that returns within its budget — it deliberately does not check correctness, or a wrong candidate could never get onto the board |
+| `run_tests` | records a pass or a failing case; a failing case derives `FAIL` | basic suite; passing proves nothing and never upgrades the status |
+| `find_counterexample` | records a counterexample; board derives `FAIL` | seeded search + shrinking, nothing hardcoded |
+| `compare_reference` | records a disagreement; board derives `FAIL` | candidate vs. the page's independent reference |
+| `measure_scaling` | records a timing note only, in every outcome | calibrates its repetition count against the candidate, reports its own noise floor, and returns `INCONCLUSIVE` when it cannot resolve a trend. If the benchmark itself runs out of time it reports `ABORTED` and leaves the status alone — a slow measurement is a fact about the measurement, not about the code |
+| `add_claim` | clears evidence about the old claim, so the board falls back to `UNKNOWN` | a new claim is a claim about something else; the specification and human disputes stand |
+| `propose_lock` | nothing | asks a human to close the board |
+| `list_board` | read-only | candidate, claim, specification, disputes, status, evidence, counterexample |
+
+Eight tools. None of them chooses a verdict — they add or remove evidence, and the board
+reads the status off that evidence. Disputing a counterexample and locking the board are page
+controls with no tool behind them.
+
+Registered on `document.modelContext`, falling back to `navigator.modelContext`. Every
+control on the page calls the same function the tool calls — there is no DOM-scraping path.
+
+### `find_counterexample` is a search, not a memory
+
+It generates inputs from a seeded PRNG, compares each against the reference, then shrinks the
+first disagreement — dropping element pairs, then rank-normalizing to distinct small integers
+so the minimal case is readable. Seeded, so a recorded demo replays exactly:
+
+```
+seed 2026 -> disagreement at trial 6
+  found as  [3,2,-7,-6,3]
+  minimal   [1,0,2]   expected 1   actual 0
+```
+
+A different `seed` finds a different route to the same defect.
+
+## The dispute loop
+
+A counterexample is a fact about the code. Whether it *counts* is a judgement about the
+problem, and the board gives that judgement only to a person.
+
+When a counterexample stands, the page offers a reason — *outside specification*, *invalid
+input domain*, *expected behaviour changed* — and a constraint to add. Disputing does not
+delete the finding; it narrows the specification, and the generator honours the narrowed
+spec from then on. Constraints are applied constructively rather than by rejection sampling,
+because filtering random arrays for "already sorted" would almost never draw one.
+
+The agent reads the current specification through `list_board` and re-verifies against it.
+So the same code can move from `FAIL` to *no counterexample found* without anyone touching
+the code — and still not reach `PASS`:
+
+```
+agent   find_counterexample   -> [1,0,2] expected 1, actual 0     FAIL
+human   dispute               -> outside specification
+                                 spec now requires sorted input
+agent   find_counterexample   -> 500 trials, no disagreement      UNKNOWN
+human   Lock                                                      LOCKED
+```
+
+That is the whole product in four lines. The agent proposed, the tools verified, and the
+person decided what the problem actually was.
+
+Note the division of labour between the two ways a board can change. Changing the *scope* of
+an existing claim is handled through human dispute and specification updates; `add_claim`
+starts a *new* claim and clears the evidence tied to the previous one. Rewriting the claim
+text is therefore not a repair path — an agent cannot edit its way out of a counterexample
+that still applies to the question actually being asked.
+
+## Execution model
+
+Submitted code never runs on the page thread. Each tool call builds a fresh Worker from a
+Blob — hardening, harness and candidate as one script, so there is no `eval` and the CSP
+needs no `'unsafe-eval'` — and terminates it when the call is done.
+
+This is **browser-isolated execution with explicit network/API hardening and host-enforced
+termination**. It is not a security sandbox in the sense that it would contain deliberately
+hostile code, and nothing here should be read as that claim.
+
+### The trust boundary is the point
+
+The candidate is asked exactly one question — *what do you return for this input?* The
+reference implementation, the input generator, the shrinker and every verdict live on the
+page thread, where submitted code has no reach.
+
+An earlier build ran the reference inside the same Worker. Two attacks broke it, and both
+are now regression tests:
+
+- **Corrupting the reference.** A candidate beginning `Array.prototype.sort = function(){ return this; }`
+  made the in-worker reference agree with it. The same buggy median that failed at trial 6
+  came back clean after 500 trials.
+- **Forging a verdict.** A candidate calling `postMessage({type:'done', result:{found:false}})`
+  at load time raced ahead of the real search, and the board reported the forgery.
+
+Both are closed by construction rather than by filtering: the reference moved out of reach,
+and the harness captures `postMessage` into a closure before hardening deletes the global,
+so a candidate has no way to emit a message the page would accept. A candidate that
+overwrites `self.onmessage` can stop answering — it cannot answer falsely, and silence is
+reported as a failure.
+
+### What the sandbox actually enforces
+
+Each property was checked in Chromium rather than assumed:
+
+- **No network.** The page ships `connect-src 'none'`, and a blob Worker inherits the
+  document policy. An unhardened worker fetching a same-origin URL is refused with
+  *"Refused to connect … because it violates the following Content Security Policy directive:
+  `connect-src 'none'`"*. WebSocket does not throw under this policy — it constructs and
+  lands in `CLOSED` — so `WebSocket` is stripped inside the worker as well.
+- **No `eval`.** `script-src 'self'` carries no `'unsafe-eval'`, and it reaches the worker:
+  a candidate calling `eval` gets an `EvalError`.
+- **No reachable escape hatches.** `fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource`,
+  `importScripts`, `Worker`, `SharedWorker`, `indexedDB`, `caches`, `BroadcastChannel`,
+  `RTCPeerConnection`, `postMessage` and `close` are deleted along the whole prototype chain
+  — shadowing `self` alone leaves `Object.getPrototypeOf(self).fetch` reachable — and
+  `navigator.sendBeacon` is cleared. A probe candidate reports `own: · proto: none`. There is
+  no DOM in a worker.
+- **Timeouts are real.** Each input carries a 1 s budget; a candidate that does not halt is
+  killed with `terminate()`, which a same-thread `new Function` could never do. Because the
+  page drives one input at a time, it knows exactly which one hung:
+
+```
+did not return within 1000 ms on [-1,0,1]
+```
+
+That is recorded as a counterexample, not a tool error — a candidate that does not halt is a
+failing candidate. The page stays responsive throughout.
+
+A candidate can still burn CPU or allocate memory until it is terminated. That is the
+accepted cost, and the timeout is the answer to it.
+
+## Run it
+
+WebMCP is a secure-context API, so serve over `localhost` rather than opening `file://`:
+
+```
+npx http-server . -p 8099
+```
+
+In a browser without WebMCP the badge says so and every control still works — the page is
+fully usable by a human alone.
+
+## Demo (2 min)
+
+1. Open the page. Status `UNKNOWN`.
+2. Agent: `run_tests` → all basic tests pass, status **stays** `UNKNOWN`.
+3. Agent: `find_counterexample` → `FAIL`, minimal case `[1,0,2]`, expected 1, actual 0.
+4. Human: dispute it — *outside specification*, spec now requires sorted input.
+5. Agent: `find_counterexample` again → 500 trials, nothing. Status back to `UNKNOWN`,
+   never `PASS`.
+6. Agent: `propose_lock` → banner appears, board stays open.
+7. Human presses **Lock**.
 
 ## Non-goals
 
-- Not a production runtime, and not a competitor to Ray, Temporal, or Dapr.
-- Not an agent framework or orchestration DSL — no reasoning graphs or
-  multi-agent conversation patterns (see LangGraph, CrewAI, or the OpenAI
-  Agents SDK for those).
-- No built-in model, prompt, tool-calling, memory, or RAG abstractions.
-- Not tied to any model vendor.
-- No distributed, cloud, or GUI layer.
+No accounts, no persistence, no backend. One problem, one board, one browser tab.
 
-## Installation
+## Licence
 
-Requires **Python 3.12+**.
-
-```bash
-pip install -e .
-```
-
-With development tooling (pytest, ruff, mypy):
-
-```bash
-pip install -e ".[dev]"
-```
-
-## Quick start
-
-```bash
-aios version
-aios run examples/hello.yaml
-```
-
-Expected output:
-
-```
-Hello AIOS!
-```
-
-Increase log verbosity with `-v` / `-vv`:
-
-```bash
-aios run examples/hello.yaml -v
-```
-
-## Example component
-
-```python
-from aios import Component, ExecutionContext, ExecutionResult
-
-
-class HelloComponent(Component):
-    def execute(self, context: ExecutionContext) -> ExecutionResult:
-        context.logger.info("running")
-        return ExecutionResult.ok("Hello AIOS!")
-```
-
-`initialize()` and `shutdown()` are optional hooks — override them only when you
-need setup or cleanup.
-
-## Manifest example
-
-A manifest is a small, **versioned** YAML file that tells the runtime which
-component to run:
-
-```yaml
-# hello.yaml
-version: 1
-component:
-  module: examples.hello_component
-  class: HelloComponent
-```
-
-Run it:
-
-```bash
-aios run hello.yaml
-```
-
-## Runtime lifecycle
-
-`Runtime.run()` executes exactly one deterministic flow:
-
-```
- read manifest → validate → load component → build context
-              → initialize() → execute() → shutdown()
-```
-
-Guarantees:
-
-- **`shutdown()` always runs**, even if `initialize()` or `execute()` raise.
-- A `shutdown()` failure **after** successful execution is surfaced as a
-  `RuntimeExecutionError`, never silently swallowed.
-- If the body already failed, a `shutdown()` failure is logged so it cannot
-  mask the original error.
-- `execute()` must return an `ExecutionResult`; anything else is an error.
-
-## Observability hooks
-
-The runtime accepts optional, **purely observational** lifecycle hooks. Hooks
-never change the flow, the context, or the result; a failing hook is isolated
-and logged. With no hooks registered, the runtime behaves and performs exactly
-as before.
-
-```python
-from aios import Runtime, HookContext, LifecyclePhase
-
-
-class TimingHook:
-    def on_lifecycle(self, context: HookContext) -> None:
-        if context.phase is LifecyclePhase.RUN_END:
-            print(f"run {context.run_id} took {context.elapsed:.3f}s")
-
-
-Runtime(hooks=[TimingHook()]).run("examples/hello.yaml")
-```
-
-See [ADR-0001](docs/adr/ADR-0001-runtime-hooks.md) for the design rationale.
-
-## Plugins
-
-A **plugin** is a lifecycle-managed unit that contributes hooks. The
-`PluginManager` discovers plugins (manual registration and, optionally, Python
-entry points), sets them up, aggregates their hooks into a `Runtime`, and tears
-them down.
-
-```python
-from aios.plugin_manager import PluginManager
-from aios.plugins import LoggingPlugin, MetricsPlugin
-
-metrics = MetricsPlugin()
-with PluginManager(plugins=[LoggingPlugin(), metrics]) as runtime:
-    runtime.run("examples/hello.yaml")
-
-print(metrics.total_runs, metrics.average_elapsed)
-```
-
-Entry-point discovery is **off by default**; enable it with
-`PluginManager(discover_entry_points=True)`. The first-party plugins are
-registered under the `aios.plugins` group: `logging`, `metrics`, `tracing`.
-
-See [ADR-0002](docs/adr/ADR-0002-plugin-api.md) (plugin API) and
-[ADR-0003](docs/adr/ADR-0003-plugin-manager.md) (plugin manager).
-
-## Project structure
-
-```
-AIOS/
-├── pyproject.toml          # hatchling build, entry point, ruff/mypy/pytest config
-├── README.md · LICENSE · CHANGELOG.md
-├── CONTRIBUTING.md · CODE_OF_CONDUCT.md · SECURITY.md
-├── .github/                # CI, issue/PR templates, dependabot, CODEOWNERS
-├── docs/
-│   ├── extension-points.md
-│   └── adr/                # architecture decision records (ADR-0001..0003)
-├── examples/
-│   ├── hello.yaml
-│   └── hello_component.py
-├── tests/
-└── src/aios/
-    ├── __init__.py         # public API + __version__
-    ├── py.typed            # PEP 561 typing marker
-    ├── exceptions.py       # AIOSError hierarchy
-    ├── logger.py           # library-safe logging
-    ├── context.py          # ExecutionContext, ExecutionResult
-    ├── component.py        # Component ABC (lifecycle contract)
-    ├── manifest.py         # versioned schema + version dispatch
-    ├── loader.py           # dynamic importlib loader
-    ├── hooks.py            # observational RuntimeHook contract
-    ├── runtime.py          # orchestration with guaranteed shutdown
-    ├── plugin.py           # Plugin API contract (types only)
-    ├── plugin_manager.py   # PluginManager (separate layer)
-    ├── cli/                # Click-based `aios` CLI
-    └── plugins/            # first-party plugins: logging, metrics, tracing
-```
-
-## Roadmap
-
-Shipped:
-
-- [x] Observational runtime hooks
-- [x] Plugin API (contract) and plugin manager (with entry-point discovery)
-- [x] First-party plugins: logging, metrics, tracing
-
-Planned as **independent modules**, never welded to the core:
-
-- [ ] Component registry
-- [ ] Event bus
-- [ ] Scheduler
-- [ ] Workflow engine
-- [ ] Configuration management
-- [ ] Async runtime
-- [ ] Distributed / cloud / edge runtimes
-- [ ] MCP integration & multi-agent runtime
-
-See [docs/extension-points.md](docs/extension-points.md) for how each attaches
-without touching the core, and [docs/adr/](docs/adr/) for the architecture
-decision records behind the hook and plugin systems.
-
-## Contributing
-
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for the
-development setup, quality gates, and the Minimum Core principle, and follow our
-[Code of Conduct](CODE_OF_CONDUCT.md).
-
-Quality gates (also enforced by CI on Python 3.12 and 3.13):
-
-```bash
-ruff check .
-mypy
-pytest
-```
-
-## License
-
-MIT — see [LICENSE](LICENSE).
+MIT — see `LICENSE`.

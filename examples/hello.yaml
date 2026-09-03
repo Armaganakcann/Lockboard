@@ -1,6 +1,0 @@
-# AIOS manifest — schema version 1
-version: 1
-
-component:
-  module: examples.hello_component
-  class: HelloComponent
