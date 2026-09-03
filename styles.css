@@ -1,0 +1,89 @@
+:root {
+  --bg: #0e1013;
+  --card: #171a1f;
+  --line: #2a3038;
+  --text: #e8eaed;
+  --muted: #8b939e;
+  --pass: #3dd68c;
+  --fail: #ff5d5d;
+  --unk: #d6b84a;
+  --lock: #7aa2ff;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 ui-sans-serif, system-ui, sans-serif; }
+.top {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  padding: 28px 28px 12px; border-bottom: 1px solid var(--line);
+}
+.brand { letter-spacing: 0.18em; font-weight: 700; font-size: 13px; }
+.tag { color: var(--muted); margin-top: 4px; }
+.badge { font-size: 12px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 999px; }
+.badge.ok { color: var(--pass); border-color: #245c40; }
+.badge.miss { color: var(--muted); }
+.grid {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px;
+  padding: 22px 28px 48px; max-width: 1100px;
+}
+@media (max-width: 840px) { .grid { grid-template-columns: 1fr; } }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 18px 20px; }
+h2 { margin: 0 0 10px; font-size: 13px; letter-spacing: 0.12em; color: var(--muted); font-weight: 650; }
+h3 { margin: 18px 0 8px; font-size: 12px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+.lead { margin: 0 0 8px; color: #c9ced6; }
+.code {
+  background: #0b0d10; border: 1px solid var(--line); padding: 12px 14px;
+  overflow: auto; font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.claim { margin: 0; font-size: 16px; }
+.status-row { display: flex; gap: 12px; align-items: center; margin: 14px 0; color: var(--muted); }
+.pill { padding: 3px 10px; border-radius: 999px; font-size: 12px; letter-spacing: 0.06em; }
+.pill.pass { color: #062; background: #1e5; color: #062; }
+.pill.fail { background: #3a1515; color: var(--fail); }
+.pill.unknown { background: #2c2712; color: var(--unk); }
+.pill.locked { background: #15203a; color: var(--lock); }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+button {
+  background: #e8eaed; color: #111; border: 0; border-radius: 8px;
+  padding: 8px 12px; cursor: pointer; font-weight: 600;
+}
+button.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+.evidence { list-style: none; margin: 0; padding: 0; }
+.evidence li {
+  border-top: 1px solid var(--line); padding: 8px 0;
+  display: flex; justify-content: space-between; gap: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;
+}
+.ok { color: var(--pass); }
+.bad { color: var(--fail); }
+.counter {
+  margin-top: 12px; padding: 12px; border: 1px dashed var(--line); border-radius: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; white-space: pre-wrap;
+}
+.counter.empty { color: var(--muted); }
+.hint, footer { color: var(--muted); font-size: 13px; }
+footer { padding: 0 28px 40px; max-width: 1100px; }
+.proposal {
+  margin: 12px 0 2px; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid #3a4668; background: #15203a; color: var(--lock); font-size: 13px;
+}
+.code-input {
+  width: 100%; min-height: 92px; margin-top: 10px; resize: vertical;
+  background: #0b0d10; color: var(--text); border: 1px solid var(--line);
+  border-radius: 8px; padding: 10px 12px;
+  font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.code-input::placeholder { color: #55606c; }
+.spec { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+.spec li { padding: 3px 0 3px 14px; position: relative; }
+.spec li::before { content: "›"; position: absolute; left: 0; color: var(--muted); }
+.spec li.muted { color: var(--muted); }
+.dispute {
+  margin: 12px 0 2px; padding: 12px; border-radius: 10px;
+  border: 1px dashed var(--line); background: #12151a;
+}
+.dispute-head { font-size: 12px; color: var(--muted); margin: 6px 0 4px; }
+.dispute-head:first-child { margin-top: 0; }
+.dispute select {
+  width: 100%; background: #0b0d10; color: var(--text);
+  border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; font: inherit; font-size: 13px;
+}
