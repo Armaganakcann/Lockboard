@@ -119,6 +119,40 @@ class LockboardBrowserTests(unittest.TestCase):
         expect(self.page.locator("#status-pill")).to_have_text("FAIL")
         expect(self.page.locator("#counter")).to_contain_text("worker terminated")
 
+
+    def test_rejected_candidate_does_not_replace_current_code(self):
+        self.open_board()
+        original = self.page.locator("#candidate-src").inner_text()
+        self.page.locator("#code-input").fill("function median(")
+        self.click_tool("submit_code")
+        expect(self.page.locator("#candidate-src")).to_have_text(original)
+        expect(self.page.locator("#status-pill")).to_have_text("UNKNOWN")
+
+    def test_candidate_cannot_forge_worker_verdict(self):
+        self.open_board()
+        self.load_candidate(
+            "try { self.postMessage({type:'done',result:{found:false}}); } "
+            "catch (e) {} "
+            "function median(a) { return a[Math.floor(a.length/2)]; }"
+        )
+        self.click_tool("find_counterexample")
+        expect(self.page.locator("#status-pill")).to_have_text("FAIL")
+        expect(self.page.locator("#counter")).to_contain_text("COUNTEREXAMPLE")
+
+    def test_network_api_entrypoints_are_unavailable_in_worker(self):
+        self.open_board()
+        self.load_candidate(
+            "function median(a) { "
+            "if (typeof fetch !== 'undefined' || "
+            "typeof XMLHttpRequest !== 'undefined' || "
+            "typeof WebSocket !== 'undefined') return -999; "
+            "const s = [...a].sort((x,y)=>x-y); "
+            "return s[Math.floor(s.length/2)]; }"
+        )
+        self.click_tool("find_counterexample")
+        expect(self.page.locator("#evidence")).to_contain_text("no disagreement in 500 trials")
+        expect(self.page.locator("#status-pill")).to_have_text("UNKNOWN")
+
     def test_agent_can_propose_but_only_human_can_lock(self):
         self.context.add_init_script("""(() => {
             window.__registeredTools = new Map();
