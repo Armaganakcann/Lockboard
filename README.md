@@ -1,5 +1,7 @@
 # Lockboard
 
+[![Browser regression tests](https://github.com/Armaganakcann/Lockboard/actions/workflows/ci.yml/badge.svg)](https://github.com/Armaganakcann/Lockboard/actions/workflows/ci.yml)
+
 **Agent proposes. Tools verify. Human defines what counts.**
 
 A claim board for generated code. The verifier and the code under test do not share a scope. The agent can write code, run it, and argue about it —
@@ -170,6 +172,19 @@ npx http-server . -p 8099
 
 In a browser without WebMCP the badge says so and every control still works — the page is
 fully usable by a human alone.
+
+## Maintainer checks
+
+The browser regression suite runs real headless Chromium against a temporary localhost HTTP server. To reproduce it locally (Python 3.12+ and Node.js required):
+
+```bash
+python -m pip install -r requirements-test.txt
+python -m playwright install chromium
+node --check app.js
+python -m unittest discover -s tests -v
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines, [SECURITY.md](SECURITY.md) for threat-model limits and reporting guidance, and [ROADMAP.md](ROADMAP.md) for planned work. These tests check defined failure modes; they do not constitute formal correctness or sandbox-security proof.
 
 ## Demo (2 min)
 
