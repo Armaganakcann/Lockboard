@@ -120,14 +120,14 @@ class LockboardBrowserTests(unittest.TestCase):
         expect(self.page.locator("#counter")).to_contain_text("worker terminated")
 
     def test_agent_can_propose_but_only_human_can_lock(self):
-        self.context.add_init_script("""() => {
+        self.context.add_init_script("""(() => {
             window.__registeredTools = new Map();
             document.modelContext = {
                 registerTool: async (spec) => {
                     window.__registeredTools.set(spec.name, spec);
                 }
             };
-        }""")
+        })()""")
         self.open_board()
         expect(self.page.locator("#mcp-badge")).to_have_text("WebMCP: 8 tools registered")
         result = self.page.evaluate("""async () => {
